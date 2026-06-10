@@ -9,15 +9,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import get_db
 from sqlalchemy.orm import Session
 
-# Importar todos los modelos para que SQLAlchemy los registre antes de create_all
+# Importar todos los modelos para que SQLAlchemy los registre
 import app.models  # noqa: F401
 
-# ---------------------------------------------------------
-# Crear tablas al arrancar (CREATE TABLE IF NOT EXISTS — idempotente).
-# Funciona en SQLite y MySQL. No rompe bases de datos ya existentes.
-# Si en el futuro se usan migraciones Alembic, reemplazar esta línea.
-# ---------------------------------------------------------
-Base.metadata.create_all(bind=engine)
+# Nota: create_all se ejecuta en entrypoint.sh (una sola vez, antes de
+# que los workers arranquen) para evitar race conditions con --workers > 1.
+# En dev local sin Docker: ejecutar `python -m app.init_db` o usar SQLite.
+ENV_MODE = os.getenv("ENV", "local").lower()
+if ENV_MODE in ("local", "test"):
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="API de Creacion de Horarios",
