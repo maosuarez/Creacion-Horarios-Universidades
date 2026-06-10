@@ -16,7 +16,7 @@ interface AuthContextType {
   user: User | null
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
-  signup: (email: string, password: string, name: string, role: "creator" | "viewer") => Promise<void>
+  signup: (email: string, password: string, name: string) => Promise<void>
   logout: () => void
   updateProfile: (data: Partial<User>) => Promise<void>
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>
@@ -82,17 +82,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
 
-  const signup = async (email: string, password: string, name: string, role: "creator" | "viewer") => {
+  const signup = async (email: string, password: string, name: string) => {
     const response = await fetch(getApiUrl("/auth/signup"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, name, role }),
+      body: JSON.stringify({ email, password, name }),
     })
-    console.log(response)
     if (!response.ok) throw new Error("Signup failed")
-    const data = await response.json()
-    localStorage.setItem("authToken", data.token)
-    setUser(data.user)
+    // Backend returns ProfileResponse (201) — no token. Login to get one.
+    await login(email, password)
   }
 
   const logout = () => {
@@ -129,11 +127,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const deleteAccount = async () => {
     const response = await fetch(getApiUrl("/auth/profile"), {
       method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-      },
+      headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
     })
-    if (!response.ok) throw new Error("Delete failed")
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err.detail || "Delete failed")
+    }
     localStorage.removeItem("authToken")
     setUser(null)
   }
