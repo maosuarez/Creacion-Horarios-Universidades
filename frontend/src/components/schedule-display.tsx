@@ -601,7 +601,7 @@ export function ScheduleDisplay({ schedules, onBack, onGenerateMore }: ScheduleD
               <p className="text-sm text-destructive">{saveError}</p>
             )}
             {saveSuccess && (
-              <p className="text-sm text-green-600">¡Horario guardado correctamente!</p>
+              <p className="text-sm text-primary">¡Horario guardado correctamente!</p>
             )}
           </div>
           <DialogFooter>
@@ -651,7 +651,7 @@ export function ScheduleDisplay({ schedules, onBack, onGenerateMore }: ScheduleD
               <p className="text-sm text-destructive">{shareError}</p>
             )}
             {shareSuccess && (
-              <p className="text-sm text-green-600">¡Horario compartido correctamente!</p>
+              <p className="text-sm text-primary">¡Horario compartido correctamente!</p>
             )}
           </div>
           <DialogFooter>

@@ -21,7 +21,7 @@ services:
       - horarios-net
     # Puerto NO expuesto al host: solo el backend (red interna) accede a la DB.
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--silent"]
       interval: 10s
       timeout: 5s
       retries: 10
