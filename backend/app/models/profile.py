@@ -67,6 +67,13 @@ class Profile(Base):
         cascade="all, delete-orphan"
     )
 
+    # Relación con horarios guardados
+    saved_schedules = relationship(
+        "SavedSchedule",
+        back_populates="profile",
+        cascade="all, delete-orphan"
+    )
+
     # Métodos útiles para manejar contraseñas
     def set_password(self, password: str):
         self.password_hash = hash_password(password)
