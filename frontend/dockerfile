@@ -1,0 +1,33 @@
+# ── Base ──────────────────────────────────────────────────────────────────────
+# Node 22 LTS (alpine) matches @types/node ^22 declared in package.json.
+FROM node:22-alpine
+
+# ── Build-time variable ───────────────────────────────────────────────────────
+# NEXT_PUBLIC_* vars are inlined at build time by Next.js webpack.
+# They must be present as ENV when `next build` runs.
+# docker-compose.yml passes this via `build.args`; docker-compose.dev.yml
+# overrides the command to `npm run dev`, so the value is only needed
+# at production build time.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+WORKDIR /app
+
+# ── Dependencies ──────────────────────────────────────────────────────────────
+# Copy manifests first so Docker can cache the install layer independently
+# of source code changes.
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# ── Source ────────────────────────────────────────────────────────────────────
+# Copy everything else. In dev mode, docker-compose.dev.yml bind-mounts
+# ./frontend/src and ./frontend/public over these, so live edits are picked up
+# without rebuilding the image. The anonymous volume on /app/node_modules
+# prevents the bind-mount from hiding the installed packages.
+COPY . .
+
+EXPOSE 3000
+
+# Default command for production. docker-compose.dev.yml overrides this with
+# ["npm", "run", "dev"] for hot-reload.
+CMD ["sh", "-c", "npm run build && npm start"]
