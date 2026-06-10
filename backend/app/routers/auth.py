@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -237,6 +239,14 @@ def delete_profile(
     Esta acción es irreversible y eliminará todos los comentarios asociados.
     """
     try:
+        # Verificar que no sea el administrador principal (menor id)
+        primary_admin = db.query(Profile).order_by(Profile.id).first()
+        if primary_admin and primary_admin.id == current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="El administrador principal no puede eliminar su cuenta"
+            )
+
         db.delete(current_user)
         db.commit()
         return None
@@ -282,6 +292,14 @@ def assign_role(
             detail="Usuario no encontrado",
         )
 
+    # Verificar que no sea el administrador principal
+    primary_admin = db.query(Profile).order_by(Profile.id).first()
+    if primary_admin and primary_admin.id == target_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No se puede cambiar el rol del administrador principal"
+        )
+
     try:
         target_user.role = UserRole(role_data.role)
         db.commit()
@@ -291,3 +309,19 @@ def assign_role(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+
+# -------------------------
+# Listar usuarios (solo creators)
+# -------------------------
+@router.get("/users", response_model=List[ProfileResponse])
+def list_users(
+    current_user: Profile = Depends(get_current_creator),
+    db: Session = Depends(get_db),
+):
+    """
+    Lista todos los usuarios registrados.
+    Requiere rol creator.
+    """
+    users = db.query(Profile).order_by(Profile.id).all()
+    return users

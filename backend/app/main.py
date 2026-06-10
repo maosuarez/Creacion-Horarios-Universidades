@@ -3,10 +3,14 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import text
 
 from app.routers import comment, courses, schedule, auth
+from app.routers import saved_schedules, shared_schedules
 from app.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import get_db
 from sqlalchemy.orm import Session
+
+# Importar todos los modelos para que SQLAlchemy los registre antes de create_all
+import app.models  # noqa: F401
 
 # ---------------------------------------------------------
 # Crear tablas al arrancar (CREATE TABLE IF NOT EXISTS — idempotente).
@@ -50,6 +54,8 @@ app.include_router(auth.router)
 app.include_router(courses.router)
 app.include_router(comment.router)
 app.include_router(schedule.router)
+app.include_router(saved_schedules.router)
+app.include_router(shared_schedules.router)
 
 @app.get("/health")
 async def health_check():
