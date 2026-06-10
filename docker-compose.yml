@@ -46,8 +46,10 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
       FRONTEND_URL: ${FRONTEND_URL}
       DB_SSL_CA: ${DB_SSL_CA:-}
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
+    # Puerto NO expuesto al host: el frontend lo alcanza vía red interna Docker.
+    # Para debug local añade: ports: ["127.0.0.1:8000:8000"]
+    expose:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
@@ -65,9 +67,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     container_name: horarios-frontend
     restart: unless-stopped
+    environment:
+      BACKEND_INTERNAL_URL: http://backend:8000
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
