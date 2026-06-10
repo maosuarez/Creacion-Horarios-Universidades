@@ -1,0 +1,277 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   LIGHT THEME (DEFAULT)
+
+   Principios:
+   - Superficies cálidas, no papel blanco puro (reduce fatiga ocular)
+   - Texto oscuro sobre fondo claro: mínimo 4.5:1 WCAG AA
+   - Índigo como color primario: profesional, académico, legible
+   ============================================================ */
+:root {
+  /* Superficies */
+  --background:             #FAFAFA;   /* warm off-white */
+  --foreground:             #111827;   /* gray-900 — 16.1:1 sobre bg ✓ */
+  --card:                   #FFFFFF;
+  --card-foreground:        #111827;
+  --popover:                #FFFFFF;
+  --popover-foreground:     #111827;
+
+  /* Marca — Índigo (profesional, académico) */
+  --primary:                #4F46E5;   /* indigo-600 — 7.0:1 sobre blanco ✓ */
+  --primary-foreground:     #FFFFFF;
+
+  /* Secundario — superficie tonal suave */
+  --secondary:              #EEF2FF;   /* indigo-50 */
+  --secondary-foreground:   #312E81;   /* indigo-900 — 11:1 sobre indigo-50 ✓ */
+
+  /* Apagado */
+  --muted:                  #F3F4F6;   /* gray-100 */
+  --muted-foreground:       #6B7280;   /* gray-500 — 4.6:1 sobre blanco ✓ */
+
+  /* Acento — Esmeralda (afirmativo, éxito) */
+  --accent:                 #F0FDF4;   /* emerald-50 */
+  --accent-foreground:      #14532D;   /* emerald-900 — 12:1 sobre emerald-50 ✓ */
+
+  /* Destructivo */
+  --destructive:            #DC2626;   /* red-600 — 5.9:1 sobre blanco ✓ */
+  --destructive-foreground: #FFFFFF;
+
+  /* Estructural */
+  --border:                 #E5E7EB;   /* gray-200 */
+  --input:                  #FFFFFF;
+  --ring:                   #4F46E5;
+
+  /* Charts */
+  --chart-1:                #4F46E5;
+  --chart-2:                #0EA5E9;
+  --chart-3:                #059669;
+  --chart-4:                #D97706;
+  --chart-5:                #DC2626;
+
+  /* Forma y ritmo */
+  --radius:                 0.5rem;
+  --spacing-unit:           1rem;
+  --base-font-size:         16px;
+  --animation-duration:     0.15s;
+
+  /* Sidebar */
+  --sidebar:                #FFFFFF;
+  --sidebar-foreground:     #111827;
+  --sidebar-primary:        #4F46E5;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent:         #F3F4F6;
+  --sidebar-accent-foreground:  #111827;
+  --sidebar-border:         #E5E7EB;
+  --sidebar-ring:           #4F46E5;
+}
+
+/* ============================================================
+   DARK THEME
+
+   Principios:
+   - Superficies Slate (no negro puro ni azul marino eléctrico)
+   - Índigo claro como primario — accesible sobre fondos oscuros
+   - Nunca texto con opacidad < 70% en modo oscuro
+   ============================================================ */
+.dark {
+  --background:             #0F172A;   /* slate-900 */
+  --foreground:             #F1F5F9;   /* slate-100 — 15:1 sobre bg ✓ */
+  --card:                   #1E293B;   /* slate-800 */
+  --card-foreground:        #F1F5F9;
+  --popover:                #1E293B;
+  --popover-foreground:     #F1F5F9;
+
+  --primary:                #818CF8;   /* indigo-400 — 6.4:1 sobre slate-900 ✓ */
+  --primary-foreground:     #1E1B4B;
+
+  --secondary:              #1E293B;
+  --secondary-foreground:   #CBD5E1;   /* slate-300 — 8.4:1 sobre slate-800 ✓ */
+
+  --muted:                  #1E293B;
+  --muted-foreground:       #94A3B8;   /* slate-400 — 4.7:1 sobre slate-900 ✓ */
+
+  --accent:                 #1E293B;
+  --accent-foreground:      #34D399;   /* emerald-400 — 8.8:1 sobre slate-800 ✓ */
+
+  --destructive:            #F87171;   /* red-400 — 5.3:1 sobre slate-900 ✓ */
+  --destructive-foreground: #450A0A;
+
+  --border:                 #334155;   /* slate-700 */
+  --input:                  #1E293B;
+  --ring:                   #818CF8;
+
+  --chart-1:                #818CF8;
+  --chart-2:                #38BDF8;
+  --chart-3:                #34D399;
+  --chart-4:                #FBBF24;
+  --chart-5:                #F87171;
+
+  --sidebar:                #0F172A;
+  --sidebar-foreground:     #F1F5F9;
+  --sidebar-primary:        #818CF8;
+  --sidebar-primary-foreground: #1E1B4B;
+  --sidebar-accent:         #1E293B;
+  --sidebar-accent-foreground:  #F1F5F9;
+  --sidebar-border:         #334155;
+  --sidebar-ring:           #818CF8;
+}
+
+/* ============================================================
+   ALTO CONTRASTE — tema real, no solo filter
+   ============================================================ */
+.high-contrast {
+  --background:             #000000;
+  --foreground:             #FFFFFF;
+  --card:                   #0A0A0A;
+  --card-foreground:        #FFFFFF;
+  --popover:                #0A0A0A;
+  --popover-foreground:     #FFFFFF;
+
+  --primary:                #FFFF00;   /* Amarillo — máximo contraste sobre negro */
+  --primary-foreground:     #000000;
+
+  --secondary:              #1A1A1A;
+  --secondary-foreground:   #FFFFFF;
+
+  --muted:                  #1A1A1A;
+  --muted-foreground:       #E5E5E5;
+
+  --accent:                 #1A1A1A;
+  --accent-foreground:      #00FF88;
+
+  --destructive:            #FF6B6B;
+  --destructive-foreground: #000000;
+
+  --border:                 #FFFFFF;
+  --input:                  #000000;
+  --ring:                   #FFFF00;
+
+  --sidebar:                #000000;
+  --sidebar-foreground:     #FFFFFF;
+  --sidebar-primary:        #FFFF00;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-border:         #FFFFFF;
+}
+
+/* ============================================================
+   TAILWIND V4 THEME BRIDGE
+   ============================================================ */
+@theme inline {
+  --font-sans:  "Geist", "Geist Fallback";
+  --font-mono:  "Geist Mono", "Geist Mono Fallback";
+
+  --color-background:              var(--background);
+  --color-foreground:              var(--foreground);
+  --color-card:                    var(--card);
+  --color-card-foreground:         var(--card-foreground);
+  --color-popover:                 var(--popover);
+  --color-popover-foreground:      var(--popover-foreground);
+  --color-primary:                 var(--primary);
+  --color-primary-foreground:      var(--primary-foreground);
+  --color-secondary:               var(--secondary);
+  --color-secondary-foreground:    var(--secondary-foreground);
+  --color-muted:                   var(--muted);
+  --color-muted-foreground:        var(--muted-foreground);
+  --color-accent:                  var(--accent);
+  --color-accent-foreground:       var(--accent-foreground);
+  --color-destructive:             var(--destructive);
+  --color-destructive-foreground:  var(--destructive-foreground);
+  --color-border:                  var(--border);
+  --color-input:                   var(--input);
+  --color-ring:                    var(--ring);
+  --color-chart-1:                 var(--chart-1);
+  --color-chart-2:                 var(--chart-2);
+  --color-chart-3:                 var(--chart-3);
+  --color-chart-4:                 var(--chart-4);
+  --color-chart-5:                 var(--chart-5);
+  --radius-sm:  calc(var(--radius) - 4px);
+  --radius-md:  calc(var(--radius) - 2px);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) + 4px);
+  --color-sidebar:                 var(--sidebar);
+  --color-sidebar-foreground:      var(--sidebar-foreground);
+  --color-sidebar-primary:         var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent:          var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border:          var(--sidebar-border);
+  --color-sidebar-ring:            var(--sidebar-ring);
+}
+
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-size: var(--base-font-size);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus visible — siempre visible, nunca outline: none */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: calc(var(--radius) - 2px);
+  }
+
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    line-height: 1.25;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* ============================================================
+   MOTION — respeta preferencias del sistema SIEMPRE
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   UTILIDADES — con propósito, no decorativas
+   ============================================================ */
+
+/* Elevación semántica: sombra sutil en luz, borde en oscuro */
+.surface-elevated {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+}
+.dark .surface-elevated {
+  box-shadow: none;
+  border-color: var(--border);
+}
+
+/* Skeleton loader — para estados de carga */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--muted) 25%,
+    color-mix(in srgb, var(--muted) 80%, var(--foreground) 5%) 50%,
+    var(--muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
