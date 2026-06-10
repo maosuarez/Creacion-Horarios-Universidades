@@ -110,7 +110,7 @@ export function CourseForm({ course, onSave, onCancel }: CourseFormProps) {
         <Button
           type="submit"
           disabled={loading}
-          className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90"
+          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           {loading ? (
             <>

@@ -36,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`font-sans antialiased bg-gradient-to-br from-background via-[#1a1a2e] to-background`}>
+      <body className={`font-sans antialiased bg-background`}>
         <Providers>{children}</Providers>
         <Analytics />
       </body>

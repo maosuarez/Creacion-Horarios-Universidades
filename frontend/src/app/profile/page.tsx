@@ -9,7 +9,8 @@ import { Navbar } from "@/components/navbar"
 import { ProtectedRoute } from "@/components/protected-route"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AlertCircle, Loader, Lock, Trash2 } from "lucide-react"
+import { AlertCircle, Loader, Lock, Trash2, MessageSquare, ChevronLeft, ChevronRight } from "lucide-react"
+import { getApiUrl } from "@/lib/api-client"
 
 export default function ProfilePage() {
   const { user, updateProfile, changePassword, deleteAccount, logout } = useAuth()
@@ -29,6 +30,25 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
 
+  // My Comments
+  interface MyComment {
+    id: number
+    content: string
+    course_id: number
+    created_at: string
+  }
+  interface MyCommentsResponse {
+    total: number
+    page: number
+    page_size: number
+    comments: MyComment[]
+  }
+  const [myComments, setMyComments] = useState<MyCommentsResponse | null>(null)
+  const [myCommentsPage, setMyCommentsPage] = useState(1)
+  const [myCommentsLoading, setMyCommentsLoading] = useState(false)
+  const [myCommentsError, setMyCommentsError] = useState("")
+  const myCommentsPageSize = 10
+
   useEffect(() => {
     if (user) {
       setName(user.name)
@@ -36,6 +56,87 @@ export default function ProfilePage() {
       setBio(user.bio || "")
     }
   }, [user])
+
+  const fetchMyComments = async (page: number) => {
+    try {
+      setMyCommentsLoading(true)
+      setMyCommentsError("")
+      const token = localStorage.getItem("authToken")
+      if (!token) return
+
+      const response = await fetch(
+        getApiUrl(`/comments/me/all?page=${page}&page_size=${myCommentsPageSize}`),
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+
+      if (response.ok) {
+        const data: MyCommentsResponse = await response.json()
+        setMyComments(data)
+      } else {
+        setMyCommentsError("Error al cargar tus comentarios")
+      }
+    } catch (err) {
+      setMyCommentsError("Error de conexión al cargar comentarios")
+      console.error("Failed to fetch my comments:", err)
+    } finally {
+      setMyCommentsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchMyComments(myCommentsPage)
+  }, [myCommentsPage])
+
+  const handleDeleteMyComment = async (commentId: number) => {
+    if (!confirm("¿Eliminar este comentario?")) return
+
+    try {
+      const token = localStorage.getItem("authToken")
+      if (!token) return
+
+      const response = await fetch(getApiUrl(`/comments/${commentId}`), {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (response.ok) {
+        await fetchMyComments(myCommentsPage)
+      } else {
+        setMyCommentsError("Error al eliminar el comentario")
+      }
+    } catch (err) {
+      setMyCommentsError("Error de conexión al eliminar comentario")
+      console.error("Failed to delete comment:", err)
+    }
+  }
+
+  const handleDeleteAllMyComments = async () => {
+    if (!confirm("¿Eliminar todos tus comentarios? Esta acción no se puede deshacer.")) return
+
+    try {
+      const token = localStorage.getItem("authToken")
+      if (!token) return
+
+      const response = await fetch(getApiUrl("/comments/me/all"), {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (response.ok) {
+        setMyCommentsPage(1)
+        await fetchMyComments(1)
+      } else {
+        setMyCommentsError("Error al eliminar los comentarios")
+      }
+    } catch (err) {
+      setMyCommentsError("Error de conexión al eliminar comentarios")
+      console.error("Failed to delete all comments:", err)
+    }
+  }
+
+  const myCommentsTotalPages = myComments ? Math.ceil(myComments.total / myCommentsPageSize) : 0
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -85,14 +186,13 @@ export default function ProfilePage() {
 
   const handleDeleteAccount = async () => {
     if (!confirm("¿Estás seguro? Esta acción no se puede deshacer.")) return
-
+    setError("")
     setLoading(true)
-
     try {
       await deleteAccount()
       router.push("/")
-    } catch (err) {
-      setError("Error al eliminar cuenta")
+    } catch (err: any) {
+      setError(err.message || "Error al eliminar cuenta")
       setLoading(false)
     }
   }
@@ -103,15 +203,13 @@ export default function ProfilePage() {
       <main className="min-h-screen">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent mb-2">
+            <h1 className="text-3xl font-bold text-foreground mb-1">
               Perfil
             </h1>
-            <p className="text-foreground/70">Administra tu información y seguridad</p>
+            <p className="text-muted-foreground">Administra tu información y seguridad</p>
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-accent/10 rounded-2xl blur-lg"></div>
-            <div className="relative bg-card border border-primary/20 rounded-2xl overflow-hidden">
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
               {/* Tabs */}
               <div className="flex border-b border-primary/20">
                 {["profile", "security", "delete"].map((t) => (
@@ -182,7 +280,7 @@ export default function ProfilePage() {
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {loading ? (
                         <>
@@ -241,7 +339,7 @@ export default function ProfilePage() {
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {loading ? (
                         <>
@@ -284,6 +382,114 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
+            </div>
+
+          {/* My Comments Section */}
+          <div className="mt-8">
+            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                  <MessageSquare size={20} />
+                  Mis comentarios
+                </h2>
+                <div className="flex items-center gap-3">
+                  {myComments && (
+                    <span className="text-sm text-foreground/60">
+                      {myComments.total} {myComments.total === 1 ? "comentario" : "comentarios"}
+                    </span>
+                  )}
+                  <Button
+                    onClick={handleDeleteAllMyComments}
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive text-xs"
+                  >
+                    Borrar todos mis comentarios
+                  </Button>
+                </div>
+              </div>
+
+              {myCommentsError && (
+                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
+                  {myCommentsError}
+                </div>
+              )}
+
+              {myCommentsLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div>
+                </div>
+              ) : !myComments || myComments.comments.length === 0 ? (
+                <div className="text-center text-foreground/60 text-sm py-8 bg-background/30 rounded-lg border border-dashed border-primary/20">
+                  No has hecho ningún comentario aún.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {myComments.comments.map((comment) => (
+                    <div
+                      key={comment.id}
+                      className="p-4 bg-background/50 rounded-lg border border-primary/10 hover:border-primary/30 transition-colors"
+                    >
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <div className="flex-1">
+                          <span className="font-semibold text-primary text-sm">
+                            Materia #{comment.course_id}
+                          </span>
+                          <p className="text-foreground/40 text-xs">
+                            {new Date(comment.created_at).toLocaleString("es-ES", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteMyComment(comment.id)}
+                          className="text-destructive hover:bg-destructive/10 p-1.5 rounded transition-colors"
+                          title="Eliminar comentario"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
+                        {comment.content}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {myComments && myCommentsTotalPages > 1 && (
+                <div className="flex items-center justify-between pt-3 border-t border-primary/20">
+                  <span className="text-xs text-foreground/60">
+                    Página {myCommentsPage} de {myCommentsTotalPages}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setMyCommentsPage((p) => Math.max(1, p - 1))}
+                      disabled={myCommentsPage === 1}
+                      size="sm"
+                      variant="outline"
+                      className="gap-1"
+                    >
+                      <ChevronLeft size={14} />
+                      Anterior
+                    </Button>
+                    <Button
+                      onClick={() => setMyCommentsPage((p) => Math.min(myCommentsTotalPages, p + 1))}
+                      disabled={myCommentsPage === myCommentsTotalPages}
+                      size="sm"
+                      variant="outline"
+                      className="gap-1"
+                    >
+                      Siguiente
+                      <ChevronRight size={14} />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

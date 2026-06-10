@@ -2,13 +2,27 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useAuth } from "@/app/auth-context"
 import { Button } from "@/components/ui/button"
-import { Menu, X, LogOut, User, BookOpen, Settings } from "lucide-react"
+import { Menu, X, LogOut, User, BookOpen, Settings, Users, Share2 } from "lucide-react"
 
 export function Navbar() {
   const { user, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
+  const pathname = usePathname()
+
+  /**
+   * Clases para ítems de nav.
+   * Las variantes ghost/outline de shadcn tienen `hover:bg-accent hover:text-accent-foreground`
+   * que twMerge resuelve correctamente cuando pasamos las clases después (className prop).
+   * Añadimos hover:text-primary explícito en ambos estados para que el color
+   * se mantenga correcto independientemente del valor de --accent.
+   */
+  const navCls = (href: string) =>
+    pathname === href
+      ? "gap-1.5 text-sm bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
+      : "gap-1.5 text-sm text-foreground/70 hover:bg-primary/10 hover:text-primary"
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
@@ -42,22 +56,38 @@ export function Navbar() {
 
                 {user.role === "creator" && (
                   <Link href="/courses">
-                    <Button variant="ghost" size="sm" className="gap-1.5 text-sm">
+                    <Button variant="ghost" size="sm" className={navCls("/courses")}>
                       <BookOpen size={15} aria-hidden="true" />
                       Materias
                     </Button>
                   </Link>
                 )}
 
+                {user.role === "creator" && (
+                  <Link href="/admin/users">
+                    <Button variant="ghost" size="sm" className={navCls("/admin/users")}>
+                      <Users size={15} aria-hidden="true" />
+                      Usuarios
+                    </Button>
+                  </Link>
+                )}
+
+                <Link href="/shared-schedules">
+                  <Button variant="ghost" size="sm" className={navCls("/shared-schedules")}>
+                    <Share2 size={15} aria-hidden="true" />
+                    Compartidos
+                  </Button>
+                </Link>
+
                 <Link href="/settings">
-                  <Button variant="ghost" size="sm" className="gap-1.5 text-sm">
+                  <Button variant="ghost" size="sm" className={navCls("/settings")}>
                     <Settings size={15} aria-hidden="true" />
                     Configuración
                   </Button>
                 </Link>
 
                 <Link href="/profile">
-                  <Button variant="ghost" size="sm" className="gap-1.5 text-sm">
+                  <Button variant="ghost" size="sm" className={navCls("/profile")}>
                     <User size={15} aria-hidden="true" />
                     Perfil
                   </Button>
@@ -108,20 +138,34 @@ export function Navbar() {
 
                 {user.role === "creator" && (
                   <Link href="/courses" onClick={() => setMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start gap-2 text-sm" role="menuitem">
+                    <Button variant="ghost" className={`w-full justify-start ${navCls("/courses")}`} role="menuitem">
                       <BookOpen size={15} /> Materias
                     </Button>
                   </Link>
                 )}
 
+                {user.role === "creator" && (
+                  <Link href="/admin/users" onClick={() => setMenuOpen(false)}>
+                    <Button variant="ghost" className={`w-full justify-start ${navCls("/admin/users")}`} role="menuitem">
+                      <Users size={15} /> Usuarios
+                    </Button>
+                  </Link>
+                )}
+
+                <Link href="/shared-schedules" onClick={() => setMenuOpen(false)}>
+                  <Button variant="ghost" className={`w-full justify-start ${navCls("/shared-schedules")}`} role="menuitem">
+                    <Share2 size={15} /> Compartidos
+                  </Button>
+                </Link>
+
                 <Link href="/settings" onClick={() => setMenuOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start gap-2 text-sm" role="menuitem">
+                  <Button variant="ghost" className={`w-full justify-start ${navCls("/settings")}`} role="menuitem">
                     <Settings size={15} /> Configuración
                   </Button>
                 </Link>
 
                 <Link href="/profile" onClick={() => setMenuOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start gap-2 text-sm" role="menuitem">
+                  <Button variant="ghost" className={`w-full justify-start ${navCls("/profile")}`} role="menuitem">
                     <User size={15} /> Perfil
                   </Button>
                 </Link>

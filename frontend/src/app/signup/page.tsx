@@ -15,7 +15,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [name, setName] = useState("")
-  const [role, setRole] = useState<"creator" | "viewer">("creator")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const { signup, user } = useAuth()
@@ -39,7 +38,7 @@ export default function SignupPage() {
     }
 
     try {
-      await signup(email, password, name, role)
+      await signup(email, password, name)
       router.push("/dashboard")
     } catch (err) {
       setError("Error en el registro. Intenta de nuevo.")
@@ -54,14 +53,12 @@ export default function SignupPage() {
       <Navbar />
       <main className="min-h-screen flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-2xl"></div>
-            <div className="relative bg-card border border-primary/30 rounded-2xl p-8 glow-effect space-y-6">
+          <div className="bg-card border border-border rounded-2xl p-8 space-y-6">
               <div className="text-center">
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                <h1 className="text-3xl font-bold text-foreground">
                   Registrarse
                 </h1>
-                <p className="text-foreground/60 mt-2">Crea tu cuenta para comenzar</p>
+                <p className="text-muted-foreground mt-2">Crea tu cuenta para comenzar</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -111,30 +108,10 @@ export default function SignupPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Tipo de Cuenta</label>
-                  <div className="flex gap-2">
-                    {(["creator", "viewer"] as const).map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRole(r)}
-                        className={`flex-1 py-2 px-3 rounded-lg border transition-all ${
-                          role === r
-                            ? "bg-primary border-primary text-primary-foreground"
-                            : "border-primary/30 text-foreground hover:border-primary"
-                        }`}
-                      >
-                        {r === "creator" ? "Creador" : "Estudiante"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-foreground font-semibold"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                 >
                   {loading ? (
                     <>
@@ -149,11 +126,10 @@ export default function SignupPage() {
 
               <div className="text-center text-sm text-foreground/60">
                 ¿Ya tienes cuenta?{" "}
-                <Link href="/login" className="text-primary hover:text-accent transition-colors font-semibold">
+                <Link href="/login" className="text-primary hover:text-primary/80 transition-colors font-semibold">
                   Inicia sesión
                 </Link>
               </div>
-            </div>
           </div>
         </div>
       </main>

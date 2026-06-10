@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Send, Trash2, Loader, MessageSquare, ChevronLeft, ChevronRight } from "lucide-react"
+import { Send, Trash2, Loader, MessageSquare, ChevronLeft, ChevronRight, Pencil, Eraser } from "lucide-react"
 import { getApiUrl } from "@/lib/api-client"
 
 interface Comment {
@@ -35,6 +35,10 @@ export function CommentSection({ courseId }: CommentSectionProps) {
   const [error, setError] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editContent, setEditContent] = useState("")
+  const [editError, setEditError] = useState("")
+  const [editSubmitting, setEditSubmitting] = useState(false)
   const pageSize = 10
 
   useEffect(() => {
@@ -164,6 +168,85 @@ export function CommentSection({ courseId }: CommentSectionProps) {
     }
   }
 
+  const handleEditComment = async (commentId: number) => {
+    if (editContent.length > 500) {
+      setEditError("El comentario no puede exceder 500 caracteres")
+      return
+    }
+    if (!editContent.trim()) return
+
+    try {
+      setEditSubmitting(true)
+      setEditError("")
+
+      const token = localStorage.getItem("authToken")
+      if (!token) {
+        setEditError("Debes iniciar sesión para editar comentarios")
+        return
+      }
+
+      const response = await fetch(getApiUrl(`/comments/${commentId}`), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: editContent.trim() }),
+      })
+
+      if (response.ok) {
+        const updated = await response.json()
+        setCommentsData((prev) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            comments: prev.comments.map((c) => (c.id === commentId ? updated : c)),
+          }
+        })
+        setEditingId(null)
+        setEditContent("")
+      } else if (response.status === 403) {
+        setEditError("No tienes permiso para editar este comentario")
+      } else {
+        setEditError("Error al editar comentario")
+      }
+    } catch (err) {
+      setEditError("Error de conexión al editar comentario")
+      console.error("Failed to edit comment:", err)
+    } finally {
+      setEditSubmitting(false)
+    }
+  }
+
+  const handleDeleteAllMyComments = async () => {
+    if (!confirm("¿Eliminar todos tus comentarios en todos los cursos? Esta acción no se puede deshacer.")) return
+
+    try {
+      const token = localStorage.getItem("authToken")
+      if (!token) {
+        setError("Debes iniciar sesión para eliminar comentarios")
+        return
+      }
+
+      const response = await fetch(getApiUrl("/comments/me/all"), {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        setCurrentPage(1)
+        await fetchComments(1)
+      } else {
+        setError("Error al eliminar los comentarios")
+      }
+    } catch (err) {
+      setError("Error de conexión al eliminar comentarios")
+      console.error("Failed to delete all comments:", err)
+    }
+  }
+
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && commentsData && newPage <= Math.ceil(commentsData.total / pageSize)) {
       setCurrentPage(newPage)
@@ -180,11 +263,23 @@ export function CommentSection({ courseId }: CommentSectionProps) {
           <MessageSquare size={20} />
           Comentarios
         </h3>
-        {commentsData && (
-          <span className="text-sm text-foreground/60">
-            {commentsData.total} {commentsData.total === 1 ? "comentario" : "comentarios"}
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {commentsData && (
+            <span className="text-sm text-foreground/60">
+              {commentsData.total} {commentsData.total === 1 ? "comentario" : "comentarios"}
+            </span>
+          )}
+          {currentUserId !== null && (
+            <button
+              onClick={handleDeleteAllMyComments}
+              title="Borrar todos mis comentarios"
+              aria-label="Borrar todos mis comentarios"
+              className="p-1.5 rounded-md text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <Eraser size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -210,7 +305,7 @@ export function CommentSection({ courseId }: CommentSectionProps) {
             onClick={handleAddComment}
             disabled={submitting || !newComment.trim()}
             size="sm"
-            className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90"
+            className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             {submitting ? (
               <>
@@ -234,8 +329,9 @@ export function CommentSection({ courseId }: CommentSectionProps) {
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div>
           </div>
         ) : comments.length === 0 ? (
-          <div className="text-center text-foreground/60 text-sm py-8 bg-background/30 rounded-lg border border-dashed border-primary/20">
-            No hay comentarios aún. ¡Sé el primero en comentar!
+          <div className="text-center text-foreground/60 text-sm py-8 px-4 bg-background/30 rounded-lg border border-dashed border-primary/20 space-y-1">
+            <p>No hay comentarios aún.</p>
+            <p>¡Sé el primero en comentar!</p>
           </div>
         ) : (
           comments.map((comment) => (
@@ -266,18 +362,76 @@ export function CommentSection({ courseId }: CommentSectionProps) {
                   </span>
                 </div>
                 {currentUserId === comment.profile_id && (
-                  <button
-                    onClick={() => handleDeleteComment(comment.id)}
-                    className="text-destructive hover:bg-destructive/10 p-1.5 rounded transition-colors"
-                    title="Eliminar comentario"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setEditingId(comment.id)
+                        setEditContent(comment.content)
+                        setEditError("")
+                      }}
+                      className="text-primary/60 hover:bg-primary/10 p-1.5 rounded transition-colors"
+                      title="Editar comentario"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteComment(comment.id)}
+                      className="text-destructive hover:bg-destructive/10 p-1.5 rounded transition-colors"
+                      title="Eliminar comentario"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 )}
               </div>
-              <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
-                {comment.content}
-              </p>
+              {editingId === comment.id ? (
+                <div className="space-y-2 mt-2">
+                  {editError && (
+                    <p className="text-destructive text-xs">{editError}</p>
+                  )}
+                  <Textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    maxLength={500}
+                    className="bg-background border-primary/30 text-sm min-h-[80px] resize-none"
+                  />
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-foreground/50">
+                      {editContent.length}/500 caracteres
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          setEditingId(null)
+                          setEditContent("")
+                          setEditError("")
+                        }}
+                        size="sm"
+                        variant="outline"
+                        disabled={editSubmitting}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        onClick={() => handleEditComment(comment.id)}
+                        size="sm"
+                        disabled={editSubmitting || !editContent.trim()}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                      >
+                        {editSubmitting ? (
+                          <Loader size={14} className="animate-spin" />
+                        ) : (
+                          "Guardar"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
+                  {comment.content}
+                </p>
+              )}
             </div>
           ))
         )}

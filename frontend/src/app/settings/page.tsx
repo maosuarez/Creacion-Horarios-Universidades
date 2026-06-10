@@ -28,7 +28,7 @@ export default function SettingsPage() {
 
         {/* Encabezado */}
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-foreground">Configuración</h1>
+          <h1 className="text-3xl font-bold text-foreground">Configuración</h1>
           <p className="text-muted-foreground">
             Personaliza la apariencia para que se adapte a ti.
           </p>
@@ -247,14 +247,14 @@ export default function SettingsPage() {
 
         {/* ── Acciones ── */}
         <div className="flex gap-3 pt-2 border-t border-border">
-          <Button onClick={handleSave} className="gap-2 min-w-[140px]" aria-live="polite">
+          <Button onClick={handleSave} className="gap-2 min-w-[140px] bg-primary hover:bg-primary/90 text-primary-foreground" aria-live="polite">
             {saved ? <Check size={15} /> : null}
             {saved ? 'Cambios guardados' : 'Guardar cambios'}
           </Button>
           <Button
             onClick={resetSettings}
             variant="outline"
-            className="gap-2"
+            className="gap-2 hover:bg-primary/10 hover:text-primary hover:border-primary/40"
           >
             <RotateCcw size={15} />
             Restablecer

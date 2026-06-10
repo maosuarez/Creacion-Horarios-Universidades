@@ -46,14 +46,12 @@ export default function LoginPage() {
       <Navbar />
       <main className="min-h-screen flex items-center justify-center px-4">
         <div className="w-full max-w-md">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-2xl"></div>
-            <div className="relative bg-card border border-primary/30 rounded-2xl p-8 glow-effect space-y-6">
+          <div className="bg-card border border-border rounded-2xl p-8 space-y-6">
               <div className="text-center">
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                <h1 className="text-3xl font-bold text-foreground">
                   Iniciar Sesión
                 </h1>
-                <p className="text-foreground/60 mt-2">Bienvenido de vuelta</p>
+                <p className="text-muted-foreground mt-2">Bienvenido de vuelta</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -91,7 +89,7 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-foreground font-semibold"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                 >
                   {loading ? (
                     <>
@@ -106,11 +104,10 @@ export default function LoginPage() {
 
               <div className="text-center text-sm text-foreground/60">
                 ¿No tienes cuenta?{" "}
-                <Link href="/signup" className="text-primary hover:text-accent transition-colors font-semibold">
+                <Link href="/signup" className="text-primary hover:text-primary/80 transition-colors font-semibold">
                   Regístrate
                 </Link>
               </div>
-            </div>
           </div>
         </div>
       </main>

@@ -1,8 +1,27 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronLeft, ChevronRight, FileSpreadsheet, Clock, ArrowLeft } from "lucide-react"
+import React, { useState } from "react"
+import { ChevronLeft, ChevronRight, FileSpreadsheet, Clock, ArrowLeft, Save, Share2, List, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet"
+import { getApiUrl } from "@/lib/api-client"
 
 interface CourseSchedule {
   day: string
@@ -29,6 +48,7 @@ interface ScheduleResponse {
 interface ScheduleDisplayProps {
   schedules: ScheduleResponse[]
   onBack: () => void
+  onGenerateMore?: () => void
 }
 
 /**
@@ -45,7 +65,6 @@ function subjectCellStyle(subjectIndex: number): React.CSSProperties {
     borderLeftWidth: '3px',
     borderLeftStyle: 'solid',
     borderLeftColor: `var(--chart-${slot})`,
-    // Tinte sutil que se adapta al tema (12% color + 88% superficie de card)
     backgroundColor: `color-mix(in srgb, var(--chart-${slot}) 12%, var(--card))`,
   }
 }
@@ -68,9 +87,37 @@ function subjectBadgeStyle(subjectIndex: number): React.CSSProperties {
   }
 }
 
-export function ScheduleDisplay({ schedules, onBack }: ScheduleDisplayProps) {
+// Mapa de índice de columna (0-5) → nombre del día en español (como viene del backend)
+const COL_TO_DAY_ES: Record<number, string> = {
+  0: "Lunes",
+  1: "Martes",
+  2: "Miércoles",
+  3: "Jueves",
+  4: "Viernes",
+  5: "Sábado",
+}
+
+export function ScheduleDisplay({ schedules, onBack, onGenerateMore }: ScheduleDisplayProps) {
   const [currentScheduleIndex, setCurrentScheduleIndex] = useState(0)
   const [expandedCell, setExpandedCell] = useState<string | null>(null)
+
+  // ── Estado: guardar horario ───────────────────────────────────────────────
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [saveName, setSaveName] = useState("")
+  const [saveLoading, setSaveLoading] = useState(false)
+  const [saveError, setSaveError] = useState("")
+  const [saveSuccess, setSaveSuccess] = useState(false)
+
+  // ── Estado: compartir horario ─────────────────────────────────────────────
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [shareEmail, setShareEmail] = useState("")
+  const [shareMessage, setShareMessage] = useState("")
+  const [shareLoading, setShareLoading] = useState(false)
+  const [shareError, setShareError] = useState("")
+  const [shareSuccess, setShareSuccess] = useState(false)
+
+  // ── Estado: drawer de materias ────────────────────────────────────────────
+  const [subjectSheetOpen, setSubjectSheetOpen] = useState(false)
 
   if (schedules.length === 0) return null
 
@@ -116,7 +163,6 @@ export function ScheduleDisplay({ schedules, onBack }: ScheduleDisplayProps) {
 
   // ── Exportar a Excel ──────────────────────────────────────────────────────
   const getSubjectHexColor = (subject: string): string => {
-    // Paleta plana para Excel (no puede leer CSS variables)
     const EXCEL_COLORS = ['#C7D2FE', '#A7F3D0', '#FDE68A', '#BAE6FD', '#FECDD3']
     const idx = subjectIndexMap.get(subject) ?? 0
     return EXCEL_COLORS[idx % EXCEL_COLORS.length]
@@ -196,6 +242,86 @@ export function ScheduleDisplay({ schedules, onBack }: ScheduleDisplayProps) {
     URL.revokeObjectURL(url)
   }
 
+  // ── Guardar horario ───────────────────────────────────────────────────────
+  const handleSaveSchedule = async () => {
+    if (!saveName.trim()) {
+      setSaveError("Escribe un nombre para el horario")
+      return
+    }
+    setSaveLoading(true)
+    setSaveError("")
+    try {
+      const response = await fetch(getApiUrl("/saved-schedules/"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+        body: JSON.stringify({
+          name: saveName.trim(),
+          schedule_data: currentSchedule,
+        }),
+      })
+      if (!response.ok) {
+        if (response.status === 401) setSaveError("Tu sesión ha expirado. Inicia sesión de nuevo.")
+        else setSaveError("Error al guardar. Intenta de nuevo.")
+        return
+      }
+      setSaveSuccess(true)
+      setTimeout(() => {
+        setSaveDialogOpen(false)
+        setSaveSuccess(false)
+        setSaveName("")
+      }, 1200)
+    } catch {
+      setSaveError("Sin conexión. Verifica tu internet e intenta de nuevo.")
+    } finally {
+      setSaveLoading(false)
+    }
+  }
+
+  // ── Compartir horario ─────────────────────────────────────────────────────
+  const handleShareSchedule = async () => {
+    if (!shareEmail.trim()) {
+      setShareError("Ingresa el correo electrónico del destinatario")
+      return
+    }
+    setShareLoading(true)
+    setShareError("")
+    try {
+      const response = await fetch(getApiUrl("/shared-schedules/"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+        body: JSON.stringify({
+          recipient_email: shareEmail.trim(),
+          schedule_data: currentSchedule,
+          message: shareMessage.trim() || null,
+        }),
+      })
+      if (!response.ok) {
+        if (response.status === 401) setShareError("Tu sesión ha expirado. Inicia sesión de nuevo.")
+        else if (response.status === 404) setShareError("No se encontró ningún usuario con ese correo.")
+        else if (response.status === 400) setShareError("No puedes compartir un horario contigo mismo.")
+        else setShareError("Error al compartir. Intenta de nuevo.")
+        return
+      }
+      setShareSuccess(true)
+      setTimeout(() => {
+        setShareDialogOpen(false)
+        setShareSuccess(false)
+        setShareEmail("")
+        setShareMessage("")
+      }, 1200)
+    } catch {
+      setShareError("Sin conexión. Verifica tu internet e intenta de nuevo.")
+    } finally {
+      setShareLoading(false)
+    }
+  }
+
   // ── Celda del grid ────────────────────────────────────────────────────────
   const renderCell = (cellContent: string, rowIdx: number, colIdx: number) => {
     const cellKey    = `${rowIdx}-${colIdx}`
@@ -203,6 +329,21 @@ export function ScheduleDisplay({ schedules, onBack }: ScheduleDisplayProps) {
     const isExpanded = expandedCell === cellKey
     const subjectIdx = courseInfo ? (subjectIndexMap.get(courseInfo.subject) ?? 0) : -1
     const isEmpty    = !cellContent || cellContent === ""
+
+    // Buscar la ubicación del schedule que coincide con este día y hora
+    let locationForCell: string | undefined
+    if (courseInfo) {
+      const dayNameEs = COL_TO_DAY_ES[colIdx]
+      const hourLabel = hour_labels[rowIdx] // e.g. "7:00"
+      const hourPrefix = hourLabel?.split(":")[0] // e.g. "7"
+      const matchingSchedule = courseInfo.schedules.find((s) => {
+        if (s.day !== dayNameEs) return false
+        // start_time viene como "07:00" o "7:00" — comparar solo la hora
+        const startHour = s.start_time?.split(":")[0]?.replace(/^0/, "")
+        return startHour === hourPrefix
+      })
+      locationForCell = matchingSchedule?.location ?? courseInfo.schedules[0]?.location
+    }
 
     return (
       <div
@@ -230,16 +371,23 @@ export function ScheduleDisplay({ schedules, onBack }: ScheduleDisplayProps) {
       >
         {courseInfo && (
           <div className="space-y-0.5">
+            {/* Nombre del curso — siempre visible */}
             <p className="text-xs font-semibold text-foreground leading-snug line-clamp-2">
               {cellContent}
             </p>
+
+            {/* Salón/ubicación — siempre visible cuando existe, texto muy pequeño */}
+            {locationForCell && (
+              <p className="text-[10px] text-muted-foreground truncate leading-tight">
+                {locationForCell}
+              </p>
+            )}
+
+            {/* Detalles adicionales — solo cuando expanded */}
             {isExpanded && (
               <div className="text-xs text-muted-foreground space-y-0.5 mt-2 pt-2 border-t border-border">
                 <p>Cód: {courseInfo.code}</p>
                 <p className="truncate">Prof: {courseInfo.teacher_name}</p>
-                {courseInfo.schedules[0]?.location && (
-                  <p className="truncate">Ubic: {courseInfo.schedules[0].location}</p>
-                )}
               </div>
             )}
           </div>
@@ -288,13 +436,23 @@ export function ScheduleDisplay({ schedules, onBack }: ScheduleDisplayProps) {
 
         {/* Controles */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* ← Volver — siempre primero y visible */}
+          <Button
+            onClick={onBack}
+            size="sm"
+            className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
+          >
+            <ArrowLeft size={15} aria-hidden="true" />
+            Volver
+          </Button>
+
           {schedules.length > 1 && (
             <>
               <Button
                 onClick={goToPreviousSchedule}
                 variant="outline"
                 size="sm"
-                className="gap-1"
+                className="gap-1 hover:bg-primary/10 hover:text-primary hover:border-primary/40"
                 aria-label="Opción anterior"
               >
                 <ChevronLeft size={15} aria-hidden="true" />
@@ -304,7 +462,7 @@ export function ScheduleDisplay({ schedules, onBack }: ScheduleDisplayProps) {
                 onClick={goToNextSchedule}
                 variant="outline"
                 size="sm"
-                className="gap-1"
+                className="gap-1 hover:bg-primary/10 hover:text-primary hover:border-primary/40"
                 aria-label="Siguiente opción"
               >
                 Siguiente
@@ -313,25 +471,62 @@ export function ScheduleDisplay({ schedules, onBack }: ScheduleDisplayProps) {
             </>
           )}
 
+          {/* Ver materias en drawer */}
+          <Button
+            onClick={() => setSubjectSheetOpen(true)}
+            variant="outline"
+            size="sm"
+            className="gap-1.5 hover:bg-primary/10 hover:text-primary hover:border-primary/40"
+            aria-label="Ver materias de este horario"
+          >
+            <List size={15} aria-hidden="true" />
+            Ver materias
+          </Button>
+
+          {/* Guardar horario */}
+          <Button
+            onClick={() => { setSaveDialogOpen(true); setSaveName(""); setSaveError(""); setSaveSuccess(false) }}
+            variant="outline"
+            size="sm"
+            className="gap-1.5 hover:bg-primary/10 hover:text-primary hover:border-primary/40"
+          >
+            <Save size={15} aria-hidden="true" />
+            Guardar
+          </Button>
+
+          {/* Compartir horario */}
+          <Button
+            onClick={() => { setShareDialogOpen(true); setShareEmail(""); setShareMessage(""); setShareError(""); setShareSuccess(false) }}
+            variant="outline"
+            size="sm"
+            className="gap-1.5 hover:bg-primary/10 hover:text-primary hover:border-primary/40"
+          >
+            <Share2 size={15} aria-hidden="true" />
+            Compartir
+          </Button>
+
           <Button
             onClick={exportToExcel}
             variant="outline"
             size="sm"
-            className="gap-1.5"
+            className="gap-1.5 hover:bg-primary/10 hover:text-primary hover:border-primary/40"
           >
             <FileSpreadsheet size={15} aria-hidden="true" />
             Exportar Excel
           </Button>
 
-          <Button
-            onClick={onBack}
-            variant="ghost"
-            size="sm"
-            className="gap-1.5"
-          >
-            <ArrowLeft size={15} aria-hidden="true" />
-            Volver
-          </Button>
+          {/* Generar más opciones */}
+          {onGenerateMore && (
+            <Button
+              onClick={onGenerateMore}
+              variant="outline"
+              size="sm"
+              className="gap-1.5 hover:bg-primary/10 hover:text-primary hover:border-primary/40"
+            >
+              <RefreshCw size={15} aria-hidden="true" />
+              Generar más
+            </Button>
+          )}
         </div>
       </div>
 
@@ -340,7 +535,7 @@ export function ScheduleDisplay({ schedules, onBack }: ScheduleDisplayProps) {
       </p>
 
       {/* ── Grid del horario ── */}
-      <div className="overflow-x-auto" role="region" aria-label="Tabla de horario">
+      <div className="overflow-x-auto overflow-y-visible" role="region" aria-label="Tabla de horario">
         <div className="inline-block min-w-full">
           <div
             className="grid gap-1"
@@ -359,12 +554,11 @@ export function ScheduleDisplay({ schedules, onBack }: ScheduleDisplayProps) {
               </div>
             ))}
 
-            {/* Filas */}
+            {/* Filas — cada fila envuelta en React.Fragment con key para evitar warning */}
             {schedule_matrix.map((row, rowIdx) => (
-              <>
+              <React.Fragment key={`row-${rowIdx}`}>
                 {/* Etiqueta de hora */}
                 <div
-                  key={`hour-${rowIdx}`}
                   className="py-1.5 px-2 bg-muted rounded-md text-center text-xs font-medium text-muted-foreground flex items-center justify-center"
                 >
                   {hour_labels[rowIdx]}
@@ -376,19 +570,111 @@ export function ScheduleDisplay({ schedules, onBack }: ScheduleDisplayProps) {
                     {renderCell(cell, rowIdx, colIdx)}
                   </div>
                 ))}
-              </>
+              </React.Fragment>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── Leyenda de materias ── */}
-      {courses.length > 0 && (
-        <div className="pt-4 border-t border-border space-y-3">
-          <h3 className="text-sm font-semibold text-foreground">
-            Materias en esta opción
-          </h3>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+      {/* ── Dialog: Guardar horario ── */}
+      <Dialog open={saveDialogOpen} onOpenChange={(open) => { setSaveDialogOpen(open); if (!open) { setSaveError(""); setSaveSuccess(false) } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Guardar horario</DialogTitle>
+            <DialogDescription>
+              Escribe un nombre para identificar este horario en tu perfil.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="save-name">Nombre</Label>
+              <Input
+                id="save-name"
+                placeholder="Ej. Horario semestre 1"
+                value={saveName}
+                onChange={(e) => setSaveName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSaveSchedule() }}
+                disabled={saveLoading || saveSuccess}
+              />
+            </div>
+            {saveError && (
+              <p className="text-sm text-destructive">{saveError}</p>
+            )}
+            {saveSuccess && (
+              <p className="text-sm text-green-600">¡Horario guardado correctamente!</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)} disabled={saveLoading} className="hover:bg-primary/10 hover:text-primary">
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveSchedule} disabled={saveLoading || saveSuccess} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              {saveLoading ? "Guardando…" : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Compartir horario ── */}
+      <Dialog open={shareDialogOpen} onOpenChange={(open) => { setShareDialogOpen(open); if (!open) { setShareError(""); setShareSuccess(false) } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Compartir horario</DialogTitle>
+            <DialogDescription>
+              Ingresa el correo del usuario con quien quieres compartir este horario.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="share-email">Correo del destinatario</Label>
+              <Input
+                id="share-email"
+                type="email"
+                placeholder="usuario@ejemplo.com"
+                value={shareEmail}
+                onChange={(e) => setShareEmail(e.target.value)}
+                disabled={shareLoading || shareSuccess}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="share-message">Mensaje (opcional)</Label>
+              <Textarea
+                id="share-message"
+                placeholder="Escribe un mensaje opcional…"
+                value={shareMessage}
+                onChange={(e) => setShareMessage(e.target.value)}
+                disabled={shareLoading || shareSuccess}
+                rows={3}
+              />
+            </div>
+            {shareError && (
+              <p className="text-sm text-destructive">{shareError}</p>
+            )}
+            {shareSuccess && (
+              <p className="text-sm text-green-600">¡Horario compartido correctamente!</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShareDialogOpen(false)} disabled={shareLoading} className="hover:bg-primary/10 hover:text-primary">
+              Cancelar
+            </Button>
+            <Button onClick={handleShareSchedule} disabled={shareLoading || shareSuccess} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              {shareLoading ? "Enviando…" : "Compartir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Sheet: Materias en esta opción ── */}
+      <Sheet open={subjectSheetOpen} onOpenChange={setSubjectSheetOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Materias en esta opción</SheetTitle>
+            <SheetDescription>
+              Opción {currentScheduleIndex + 1} — {courses.length} {courses.length === 1 ? "materia" : "materias"}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="space-y-3 mt-2">
             {courses.map((course, idx) => (
               <div
                 key={idx}
@@ -407,11 +693,17 @@ export function ScheduleDisplay({ schedules, onBack }: ScheduleDisplayProps) {
                   </span>
                   {course.teacher_name}
                 </p>
+                {course.schedules.map((s, si) => (
+                  <p key={si} className="text-xs text-muted-foreground">
+                    {s.day} {s.start_time}–{s.end_time}
+                    {s.location && <span className="ml-1 text-foreground/70">· {s.location}</span>}
+                  </p>
+                ))}
               </div>
             ))}
           </div>
-        </div>
-      )}
+        </SheetContent>
+      </Sheet>
 
     </div>
   )

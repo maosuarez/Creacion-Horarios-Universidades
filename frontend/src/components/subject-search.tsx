@@ -26,6 +26,7 @@ export function SubjectSearch({ onSelectSubject, disabled }: SubjectSearchProps)
     if (!searchTerm.trim()) {
       setSuggestions([])
       setError("")
+      setLoading(false)
       return
     }
 

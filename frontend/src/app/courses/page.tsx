@@ -8,30 +8,36 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AlertCircle, Plus, Trash2, Edit2, Search, X, Calendar, Clock } from "lucide-react"
 import { CommentSection } from "@/components/comment-section"
+import { AutocompleteInput } from "@/components/autocomplete-input"
 import { getApiUrl } from "@/lib/api-client"
 
 interface Schedule {
   day: string
   start_time: string
   end_time: string
+  location?: string
 }
 
 interface Course {
   id: number
   subject: string
   code: number
-  teacher_name: string
+  teacher_full_name: string
   schedules: Schedule[]
 }
 
+// El backend devuelve días en español sin tilde (Lunes, Miercoles, Sabado).
+// Este mapa añade la tilde donde corresponde para la visualización.
+/** Trunca "HH:MM:SS" → "HH:MM"; deja "HH:MM" intacto */
+const fmtTime = (t: string) => (t ? t.slice(0, 5) : t)
+
 const DAY_LABELS: Record<string, string> = {
-  monday: "Lunes",
-  tuesday: "Martes",
-  wednesday: "Miércoles",
-  thursday: "Jueves",
-  friday: "Viernes",
-  saturday: "Sábado",
-  sunday: "Domingo"
+  Lunes: "Lunes",
+  Martes: "Martes",
+  Miercoles: "Miércoles",
+  Jueves: "Jueves",
+  Viernes: "Viernes",
+  Sabado: "Sábado",
 }
 
 export default function CoursesPage() {
@@ -89,7 +95,7 @@ export default function CoursesPage() {
     (course) =>
       course.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.code.toString().includes(searchTerm) ||
-      course.teacher_name.toLowerCase().includes(searchTerm.toLowerCase()),
+      (course.teacher_full_name ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   if (loading) {
@@ -106,13 +112,13 @@ export default function CoursesPage() {
   return (
     <ProtectedRoute>
       <Navbar />
-      <main className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      <main className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent mb-2">
+            <h1 className="text-3xl font-bold text-foreground mb-1">
               Gestión de Cursos
             </h1>
-            <p className="text-foreground/70">Crea y administra tus cursos disponibles</p>
+            <p className="text-muted-foreground">Crea y administra tus cursos disponibles</p>
           </div>
 
           {error && (
@@ -122,12 +128,10 @@ export default function CoursesPage() {
             </div>
           )}
 
-          <div className="grid lg:grid-cols-3 gap-6">
+          <div className="grid lg:grid-cols-3 gap-6 items-start">
             {/* Courses List */}
             <div className="lg:col-span-2">
-              <div className="relative mb-6">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-accent/10 rounded-2xl blur-lg"></div>
-                <div className="relative bg-card border border-primary/20 rounded-2xl p-6">
+              <div className="bg-card border border-border rounded-2xl p-6">
                   <div className="flex gap-3 mb-6">
                     <div className="flex-1 relative">
                       <Search size={18} className="absolute left-3 top-3 text-foreground/40" />
@@ -143,7 +147,7 @@ export default function CoursesPage() {
                         setEditingCourse(null)
                         setShowForm(true)
                       }}
-                      className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                      className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <Plus size={18} />
                       Nuevo Curso
@@ -167,7 +171,7 @@ export default function CoursesPage() {
                   )}
 
                   {!showForm && (
-                    <div className="space-y-3">
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
                       {filteredCourses.length === 0 ? (
                         <div className="text-center py-8 text-foreground/60">
                           {searchTerm ? "No se encontraron cursos" : "No hay cursos disponibles"}
@@ -186,9 +190,9 @@ export default function CoursesPage() {
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex-1">
                                 <h3 className="font-bold text-lg text-foreground">{course.subject}</h3>
-                                <p className="text-sm text-foreground/60 mt-1">{course.teacher_name}</p>
+                                <p className="text-sm text-foreground/60 mt-1">{course.teacher_full_name}</p>
                               </div>
-                              <span className="bg-accent/20 text-accent px-3 py-1 rounded-full text-sm font-semibold">
+                              <span className="bg-primary/15 text-primary px-3 py-1 rounded-full text-sm font-semibold font-mono">
                                 {course.code}
                               </span>
                             </div>
@@ -198,13 +202,14 @@ export default function CoursesPage() {
                               {course.schedules.slice(0, 3).map((schedule, idx) => (
                                 <span
                                   key={idx}
-                                  className="text-xs bg-secondary/20 text-secondary px-2 py-1 rounded"
+                                  className="text-xs bg-muted text-foreground/75 px-2 py-1 rounded"
                                 >
-                                  {DAY_LABELS[schedule.day]} {schedule.start_time}-{schedule.end_time}
+                                  {DAY_LABELS[schedule.day] ?? schedule.day}{" "}
+                                  {fmtTime(schedule.start_time)}–{fmtTime(schedule.end_time)}
                                 </span>
                               ))}
                               {course.schedules.length > 3 && (
-                                <span className="text-xs bg-secondary/20 text-secondary px-2 py-1 rounded">
+                                <span className="text-xs bg-muted text-foreground/75 px-2 py-1 rounded">
                                   +{course.schedules.length - 3} más
                                 </span>
                               )}
@@ -217,7 +222,7 @@ export default function CoursesPage() {
                                   setEditingCourse(course)
                                   setShowForm(true)
                                 }}
-                                className="flex-1 px-3 py-2 bg-accent/10 text-accent hover:bg-accent/20 rounded text-sm font-medium transition-colors flex items-center justify-center gap-1"
+                                className="flex-1 px-3 py-2 bg-muted text-foreground hover:bg-primary/10 hover:text-primary rounded text-sm font-medium transition-colors flex items-center justify-center gap-1"
                               >
                                 <Edit2 size={14} />
                                 Editar
@@ -238,19 +243,17 @@ export default function CoursesPage() {
                       )}
                     </div>
                   )}
-                </div>
               </div>
             </div>
 
-            {/* Course Details & Comments */}
+            {/* Course Details & Comments — sticky para que permanezca visible al hacer scroll */}
             {selectedCourse && !showForm && (
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-secondary/10 to-accent/10 rounded-2xl blur-lg"></div>
-                <div className="relative bg-card border border-primary/20 rounded-2xl p-6">
+              <div className="sticky top-8 self-start">
+                <div className="bg-card border border-border rounded-2xl p-6">
                   <div className="mb-6">
                     <h2 className="text-xl font-bold text-foreground mb-1">{selectedCourse.subject}</h2>
-                    <p className="text-sm text-foreground/60">{selectedCourse.teacher_name}</p>
-                    <span className="inline-block mt-2 bg-accent/20 text-accent px-3 py-1 rounded-full text-sm font-semibold">
+                    <p className="text-sm text-foreground/60">{selectedCourse.teacher_full_name}</p>
+                    <span className="inline-block mt-2 bg-primary/15 text-primary px-3 py-1 rounded-full text-sm font-semibold font-mono">
                       Código: {selectedCourse.code}
                     </span>
                   </div>
@@ -264,16 +267,19 @@ export default function CoursesPage() {
                       {selectedCourse.schedules.map((schedule, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center gap-2 p-3 bg-secondary/10 border border-secondary/20 rounded-lg"
+                          className="flex items-center gap-2 p-3 bg-muted/50 border border-border rounded-lg"
                         >
                           <div className="flex-1">
                             <p className="font-medium text-sm text-foreground">
-                              {DAY_LABELS[schedule.day]}
+                              {DAY_LABELS[schedule.day] ?? schedule.day}
                             </p>
                             <p className="text-xs text-foreground/60 flex items-center gap-1 mt-1">
                               <Clock size={12} />
-                              {schedule.start_time} - {schedule.end_time}
+                              {fmtTime(schedule.start_time)} – {fmtTime(schedule.end_time)}
                             </p>
+                            {schedule.location && (
+                              <p className="text-xs text-foreground/50 mt-1">📍 {schedule.location}</p>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -291,6 +297,40 @@ export default function CoursesPage() {
   )
 }
 
+// Funciones de autocompletado para el formulario
+async function fetchSubjectSuggestions(query: string): Promise<string[]> {
+  try {
+    const res = await fetch(getApiUrl(`/courses/search/subjects?query=${encodeURIComponent(query)}`))
+    if (!res.ok) return []
+    const data = await res.json()
+    return Array.isArray(data) ? data.map((d: { subject: string }) => d.subject) : []
+  } catch {
+    return []
+  }
+}
+
+async function fetchTeacherSuggestions(query: string): Promise<string[]> {
+  try {
+    const res = await fetch(getApiUrl(`/courses/search/teacher-names?query=${encodeURIComponent(query)}`))
+    if (!res.ok) return []
+    const data = await res.json()
+    return Array.isArray(data) ? data.map((d: { full_name: string }) => d.full_name) : []
+  } catch {
+    return []
+  }
+}
+
+async function fetchLocationSuggestions(query: string): Promise<string[]> {
+  try {
+    const res = await fetch(getApiUrl(`/courses/search/locations?query=${encodeURIComponent(query)}`))
+    if (!res.ok) return []
+    const data = await res.json()
+    return Array.isArray(data) ? data.map((d: { location: string }) => d.location) : []
+  } catch {
+    return []
+  }
+}
+
 // Componente de formulario integrado
 function CourseFormComponent({
   course,
@@ -306,15 +346,18 @@ function CourseFormComponent({
   const [formData, setFormData] = useState({
     subject: course?.subject || "",
     code: course?.code?.toString() || "",
-    teacher_name: course?.teacher_name || "",
+    // El back devuelve teacher_full_name; el payload de PUT/POST usa teacher_name
+    teacher_name: course?.teacher_full_name || "",
   })
   const [schedules, setSchedules] = useState<Schedule[]>(
-    course?.schedules || [{ day: "monday", start_time: "08:00", end_time: "10:00" }]
+    course?.schedules?.length
+      ? course.schedules
+      : [{ day: "Lunes", start_time: "08:00", end_time: "10:00" }]
   )
   const [saving, setSaving] = useState(false)
 
   const handleSubmit = async () => {
-    // Validaciones
+    // Validaciones básicas
     if (!formData.subject.trim() || formData.subject.length > 100) {
       onError("La materia debe tener entre 1 y 100 caracteres")
       return
@@ -332,6 +375,13 @@ function CourseFormComponent({
       return
     }
 
+    // Deduplicar horarios idénticos (mismo día + hora inicio + hora fin)
+    const dedupedSchedules = schedules.filter((s, index, arr) =>
+      arr.findIndex(
+        (x) => x.day === s.day && x.start_time === s.start_time && x.end_time === s.end_time
+      ) === index
+    )
+
     try {
       setSaving(true)
       onError("")
@@ -340,7 +390,7 @@ function CourseFormComponent({
         subject: formData.subject.trim(),
         code: parseInt(formData.code),
         teacher_name: formData.teacher_name.trim(),
-        schedules: schedules,
+        schedules: dedupedSchedules,
       }
 
       const url = course ? getApiUrl(`/courses/${course.id}`) : getApiUrl("/courses/")
@@ -370,7 +420,7 @@ function CourseFormComponent({
 
   const addSchedule = () => {
     if (schedules.length < 10) {
-      setSchedules([...schedules, { day: "monday", start_time: "08:00", end_time: "10:00" }])
+      setSchedules([...schedules, { day: "Lunes", start_time: "08:00", end_time: "10:00" }])
     }
   }
 
@@ -400,10 +450,11 @@ function CourseFormComponent({
       <div className="grid md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="subject">Materia *</Label>
-          <Input
+          <AutocompleteInput
             id="subject"
             value={formData.subject}
-            onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+            onChange={(v) => setFormData({ ...formData, subject: v })}
+            fetchSuggestions={fetchSubjectSuggestions}
             placeholder="Ej: Cálculo I"
             maxLength={100}
             className="bg-background"
@@ -426,10 +477,11 @@ function CourseFormComponent({
 
       <div>
         <Label htmlFor="teacher">Profesor *</Label>
-        <Input
+        <AutocompleteInput
           id="teacher"
           value={formData.teacher_name}
-          onChange={(e) => setFormData({ ...formData, teacher_name: e.target.value })}
+          onChange={(v) => setFormData({ ...formData, teacher_name: v })}
+          fetchSuggestions={fetchTeacherSuggestions}
           placeholder="Ej: Dr. Juan Pérez"
           maxLength={100}
           className="bg-background"
@@ -453,53 +505,69 @@ function CourseFormComponent({
 
         <div className="space-y-3">
           {schedules.map((schedule, index) => (
-            <div key={index} className="flex gap-2 p-3 bg-card border border-primary/10 rounded-lg">
-              <div className="flex-1">
-                <Label className="text-xs">Día</Label>
-                <select
-                  value={schedule.day}
-                  onChange={(e) => updateSchedule(index, "day", e.target.value)}
-                  className="w-full p-2 text-sm bg-background border border-primary/20 rounded mt-1"
-                >
-                  <option value="monday">Lunes</option>
-                  <option value="tuesday">Martes</option>
-                  <option value="wednesday">Miércoles</option>
-                  <option value="thursday">Jueves</option>
-                  <option value="friday">Viernes</option>
-                  <option value="saturday">Sábado</option>
-                </select>
+            <div key={index} className="p-3 bg-card border border-primary/10 rounded-lg space-y-2">
+              {/* Fila principal: día, hora inicio, hora fin, eliminar */}
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Label className="text-xs">Día</Label>
+                  <select
+                    value={schedule.day}
+                    onChange={(e) => updateSchedule(index, "day", e.target.value)}
+                    className="w-full p-2 text-sm bg-background border border-primary/20 rounded mt-1"
+                  >
+                    <option value="Lunes">Lunes</option>
+                    <option value="Martes">Martes</option>
+                    <option value="Miercoles">Miércoles</option>
+                    <option value="Jueves">Jueves</option>
+                    <option value="Viernes">Viernes</option>
+                    <option value="Sabado">Sábado</option>
+                  </select>
+                </div>
+
+                <div className="flex-1">
+                  <Label className="text-xs">Hora inicio</Label>
+                  <Input
+                    type="time"
+                    value={schedule.start_time}
+                    onChange={(e) => updateSchedule(index, "start_time", e.target.value)}
+                    className="bg-background mt-1"
+                  />
+                </div>
+
+                <div className="flex-1">
+                  <Label className="text-xs">Hora fin</Label>
+                  <Input
+                    type="time"
+                    value={schedule.end_time}
+                    onChange={(e) => updateSchedule(index, "end_time", e.target.value)}
+                    className="bg-background mt-1"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <Button
+                    onClick={() => removeSchedule(index)}
+                    disabled={schedules.length === 1}
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
               </div>
 
-              <div className="flex-1">
-                <Label className="text-xs">Hora inicio</Label>
-                <Input
-                  type="time"
-                  value={schedule.start_time}
-                  onChange={(e) => updateSchedule(index, "start_time", e.target.value)}
-                  className="bg-background mt-1"
+              {/* Fila secundaria: salón (opcional) */}
+              <div>
+                <Label className="text-xs">Salón (opcional)</Label>
+                <AutocompleteInput
+                  value={schedule.location || ""}
+                  onChange={(v) => updateSchedule(index, "location", v)}
+                  fetchSuggestions={fetchLocationSuggestions}
+                  placeholder="Ej: Aula 101"
+                  maxLength={200}
+                  className="bg-background h-8 text-sm mt-1"
                 />
-              </div>
-
-              <div className="flex-1">
-                <Label className="text-xs">Hora fin</Label>
-                <Input
-                  type="time"
-                  value={schedule.end_time}
-                  onChange={(e) => updateSchedule(index, "end_time", e.target.value)}
-                  className="bg-background mt-1"
-                />
-              </div>
-
-              <div className="flex items-end">
-                <Button
-                  onClick={() => removeSchedule(index)}
-                  disabled={schedules.length === 1}
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 size={16} />
-                </Button>
               </div>
             </div>
           ))}
@@ -507,7 +575,7 @@ function CourseFormComponent({
       </div>
 
       <div className="flex gap-3">
-        <Button onClick={handleSubmit} disabled={saving} className="flex-1 bg-gradient-to-r from-primary to-accent">
+        <Button onClick={handleSubmit} disabled={saving} className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground">
           {saving ? "Guardando..." : course ? "Actualizar" : "Crear Curso"}
         </Button>
         <Button onClick={onCancel} variant="outline" className="flex-1">

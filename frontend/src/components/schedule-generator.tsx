@@ -203,6 +203,52 @@ export function ScheduleGenerator() {
     }
   }
 
+  const handleGenerateMore = async () => {
+    setError("")
+    setLoading(true)
+    try {
+      const payload = {
+        preferencias: courses.reduce((acc, course) => {
+          if (course.subject) {
+            acc[course.subject] = {
+              profesores: course.teachers,
+              codes: course.codes.map((c) => Number.parseInt(c as string)),
+            }
+          }
+          return acc
+        }, {} as Record<string, any>),
+        freetime: freeTime,
+      }
+
+      const response = await fetch(getApiUrl("/generate-schedules/"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        if (response.status === 401)      setError("Tu sesión ha expirado. Por favor inicia sesión nuevamente.")
+        else if (response.status === 404) setError("No se encontraron más combinaciones.")
+        else                              setError("Error al generar más horarios. Intenta de nuevo.")
+        return
+      }
+
+      const data = await response.json()
+      const newSchedules = Array.isArray(data) ? data : [data]
+      setGeneratedSchedules((prev) => [...prev, ...newSchedules])
+    } catch (err) {
+      setError(err instanceof TypeError
+        ? "Sin conexión. Verifica tu internet e intenta de nuevo."
+        : "Error al generar horarios. Intenta de nuevo."
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (showingScheduleDisplay && generatedSchedules.length > 0) {
     return (
       <ScheduleDisplay
@@ -213,6 +259,7 @@ export function ScheduleGenerator() {
           localStorage.removeItem("lastGeneratedSchedules")
           setSavedSchedulesBanner(null)
         }}
+        onGenerateMore={handleGenerateMore}
       />
     )
   }
