@@ -193,29 +193,6 @@ def list_comments(
     )
 
 # ---------------------------------------------------------------------------
-# Obtener comentario por ID
-# ---------------------------------------------------------------------------
-
-@router.get("/{comment_id}", response_model=CommentResponse)
-def get_comment(
-    comment_id: int,
-    db: Session = Depends(get_db)
-):
-    """
-    Obtiene un comentario por ID a través de la función centralizada
-    que maneja errores y validaciones.
-    """
-    try:
-        comment = get_comment_or_404(comment_id, db)
-        return CommentResponse.model_validate(comment)
-
-    except HTTPException:
-        raise
-
-    except Exception:
-        raise HTTPException(500, "Error al obtener el comentario")
-
-# ---------------------------------------------------------------------------
 # Obtener todos mis comentarios
 # ---------------------------------------------------------------------------
 
@@ -269,6 +246,29 @@ def get_my_comments(
         page_size=page_size,
         comments=comments_response
     )
+
+# ---------------------------------------------------------------------------
+# Obtener comentario por ID
+# ---------------------------------------------------------------------------
+
+@router.get("/{comment_id}", response_model=CommentResponse)
+def get_comment(
+    comment_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene un comentario por ID a través de la función centralizada
+    que maneja errores y validaciones.
+    """
+    try:
+        comment = get_comment_or_404(comment_id, db)
+        return CommentResponse.model_validate(comment)
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        raise HTTPException(500, "Error al obtener el comentario")
 
 # ---------------------------------------------------------------------------
 # Actualizar comentario
@@ -332,6 +332,46 @@ def update_comment(
     return response
 
 # ---------------------------------------------------------------------------
+# Eliminar todos mis comentarios
+# ---------------------------------------------------------------------------
+
+@router.delete("/me/all", status_code=status.HTTP_200_OK)
+def delete_all_my_comments(
+    current_user: Profile = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Elimina todos los comentarios del usuario autenticado.
+
+    Flujo:
+    1. Filtro por profile_id
+    2. Eliminación en lote
+    3. Confirmación con commit
+    4. Manejo exhaustivo de errores
+    """
+    try:
+        # Eliminamos con delete() directo para operaciones masivas.
+        deleted_count = db.query(Comment).filter(
+            Comment.profile_id == current_user.id
+        ).delete(synchronize_session=False)
+
+        # Guardamos los cambios.
+        db.commit()
+
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error interno al eliminar tus comentarios")
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error inesperado al eliminar tus comentarios")
+
+    return {
+        "message": f"Se eliminaron {deleted_count} comentario(s)",
+        "deleted_count": deleted_count
+    }
+
+# ---------------------------------------------------------------------------
 # Eliminar comentario
 # ---------------------------------------------------------------------------
 
@@ -376,43 +416,3 @@ def delete_comment(
         raise HTTPException(status_code=500, detail="Error inesperado al eliminar el comentario")
 
     return None
-
-# ---------------------------------------------------------------------------
-# Eliminar todos mis comentarios
-# ---------------------------------------------------------------------------
-
-@router.delete("/me/all", status_code=status.HTTP_200_OK)
-def delete_all_my_comments(
-    current_user: Profile = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Elimina todos los comentarios del usuario autenticado.
-
-    Flujo:
-    1. Filtro por profile_id
-    2. Eliminación en lote
-    3. Confirmación con commit
-    4. Manejo exhaustivo de errores
-    """
-    try:
-        # Eliminamos con delete() directo para operaciones masivas.
-        deleted_count = db.query(Comment).filter(
-            Comment.profile_id == current_user.id
-        ).delete(synchronize_session=False)
-
-        # Guardamos los cambios.
-        db.commit()
-
-    except SQLAlchemyError:
-        db.rollback()
-        raise HTTPException(status_code=500, detail="Error interno al eliminar tus comentarios")
-
-    except Exception:
-        db.rollback()
-        raise HTTPException(status_code=500, detail="Error inesperado al eliminar tus comentarios")
-
-    return {
-        "message": f"Se eliminaron {deleted_count} comentario(s)",
-        "deleted_count": deleted_count
-    }

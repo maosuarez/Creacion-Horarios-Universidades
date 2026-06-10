@@ -85,3 +85,11 @@ class TeacherOption(BaseModel):
     id: int
     full_name: str
 
+class TeacherNameSuggestion(BaseModel):
+    """Sugerencia de nombre de profesor para autocompletado"""
+    full_name: str
+
+class LocationSuggestion(BaseModel):
+    """Sugerencia de ubicación/salón para autocompletado"""
+    location: str
+

@@ -11,7 +11,7 @@ from sqlalchemy import func
 from app.models.course import Course
 from app.models.course_schedule import CourseSchedule
 from app.models.teacher import Teacher
-from app.schemas.course import CourseCreate, CourseUpdate, CodeOption, TeacherOption, SubjectOption
+from app.schemas.course import CourseCreate, CourseUpdate, CodeOption, TeacherOption, SubjectOption, TeacherNameSuggestion, LocationSuggestion
 from app.schemas.course_schedule import CourseSchedule as SchemaSchedule
 from app.database import get_db
 
@@ -291,7 +291,12 @@ def create_course(data: CourseCreate, db: Session = Depends(get_db)):
 @router.put("/{course_id}")
 def update_course(course_id: Annotated[int, Path(title="ID del curso", description="Debe ser un entero positivo", ge=1)], data: CourseUpdate, db: Session = Depends(get_db)):
     try:
-        course = db.query(Course).filter(Course.id == course_id).first()
+        course = (
+            db.query(Course)
+            .options(joinedload(Course.teacher), joinedload(Course.schedules))
+            .filter(Course.id == course_id)
+            .first()
+        )
         if not course:
             raise HTTPException(404, "Curso no encontrado")
 
@@ -493,9 +498,10 @@ def update_course(course_id: Annotated[int, Path(title="ID del curso", descripti
                             f"Solape entre los horarios del curso."
                         )
 
-        # Guardar cambios
+        # Guardar cambios y recargar relaciones
         db.commit()
         db.refresh(course)
+        teacher_full_name = course.teacher.full_name if course.teacher else None
 
         return {
             "message": "Curso actualizado correctamente",
@@ -503,7 +509,7 @@ def update_course(course_id: Annotated[int, Path(title="ID del curso", descripti
                 "id": course.id,
                 "subject": course.subject,
                 "code": course.code,
-                "teacher_full_name": teacher.full_name,
+                "teacher_full_name": teacher_full_name,
                 "schedules": [
                     {
                         "id": s.id,
@@ -551,8 +557,9 @@ def get_course(course_id: Annotated[int, Path(title="ID del curso", description=
         for s in (course.schedules or []):
             schedules.append({
                 "day": s.day,
-                "start_time":  s.start_time,
-                "end_time": s.end_time
+                "start_time": s.start_time,
+                "end_time": s.end_time,
+                "location": s.location,
             })
 
         payload = {
@@ -562,7 +569,7 @@ def get_course(course_id: Annotated[int, Path(title="ID del curso", description=
             "teacher_full_name": teacher_full_name,
             "schedules": schedules
         }
-    
+
         return JSONResponse(content=jsonable_encoder(payload), status_code=200)
 
     except HTTPException:
@@ -607,7 +614,8 @@ def get_all_courses(db: Session = Depends(get_db)):
                 schedules.append({
                     "day": s.day,
                     "start_time": s.start_time,
-                    "end_time": s.end_time
+                    "end_time": s.end_time,
+                    "location": s.location,
                 })
 
             payload.append({
@@ -725,3 +733,56 @@ def get_teachers_by_subject(
 
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Error interno al consultar profesores")
+    except HTTPException:
+        raise
+
+
+@router.get("/search/teacher-names", response_model=List[TeacherNameSuggestion])
+def search_teacher_names(
+    query: str = Query(..., min_length=1, description="Texto parcial para buscar profesores"),
+    db: Session = Depends(get_db)
+):
+    """
+    Búsqueda typeahead de nombres de profesores (para autocompletado en formulario).
+    Retorna profesores cuyo nombre contenga el texto ingresado (insensible a mayúsculas).
+    """
+    try:
+        results = (
+            db.query(Teacher.full_name)
+            .filter(Teacher.full_name.ilike(f"%{query}%"))
+            .order_by(Teacher.full_name)
+            .limit(20)
+            .all()
+        )
+        return [TeacherNameSuggestion(full_name=r[0]) for r in results]
+
+    except SQLAlchemyError:
+        raise HTTPException(status_code=500, detail="Error interno al buscar profesores")
+
+
+@router.get("/search/locations", response_model=List[LocationSuggestion])
+def search_locations(
+    query: str = Query(..., min_length=1, description="Texto parcial para buscar ubicaciones"),
+    db: Session = Depends(get_db)
+):
+    """
+    Búsqueda typeahead de ubicaciones/salones (para autocompletado en formulario).
+    Retorna ubicaciones distintas que contengan el texto ingresado.
+    """
+    try:
+        results = (
+            db.query(CourseSchedule.location)
+            .filter(
+                CourseSchedule.location.isnot(None),
+                CourseSchedule.location != "",
+                CourseSchedule.location.ilike(f"%{query}%")
+            )
+            .distinct()
+            .order_by(CourseSchedule.location)
+            .limit(20)
+            .all()
+        )
+        return [LocationSuggestion(location=r[0]) for r in results]
+
+    except SQLAlchemyError:
+        raise HTTPException(status_code=500, detail="Error interno al buscar ubicaciones")
