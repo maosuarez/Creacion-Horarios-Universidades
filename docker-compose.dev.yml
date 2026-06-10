@@ -1,0 +1,31 @@
+# Overrides de desarrollo: hot-reload + SQLite (sin MySQL).
+# Uso: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+services:
+  db:
+    profiles: ["disabled"]
+
+  backend:
+    environment:
+      ENV: local
+      DB_ENGINE: sqlite
+      SQLITE_PATH: /app/data/dev.db
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/data:/app/data
+
+  frontend:
+    build:
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    command: ["npm", "run", "dev"]
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - /app/node_modules
+    depends_on:
+      - backend

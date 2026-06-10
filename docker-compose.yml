@@ -1,0 +1,89 @@
+# Orquestación producción/local-completa: frontend + backend + MySQL.
+# Uso: docker compose up --build
+#
+# ARQUITECTURA: NEXT_PUBLIC_API_URL apunta a localhost:8000 porque el frontend
+# Next.js hace fetch desde el NAVEGADOR del cliente, no desde el contenedor.
+# Un nombre de servicio Docker (backend:8000) NO es alcanzable por el navegador.
+# Por eso el backend SÍ se expone en :8000.
+services:
+  db:
+    image: mysql:8.0
+    container_name: horarios-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - horarios-net
+    # Puerto NO expuesto al host: solo el backend (red interna) accede a la DB.
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: horarios-backend
+    restart: unless-stopped
+    environment:
+      ENV: ${ENV}
+      DB_ENGINE: mysql
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
+      FRONTEND_URL: ${FRONTEND_URL}
+      DB_SSL_CA: ${DB_SSL_CA:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - horarios-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health').status==200 else sys.exit(1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: horarios-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - horarios-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  horarios-net:
+    driver: bridge
+
+volumes:
+  db_data:
