@@ -57,7 +57,7 @@ export default function CoursesPage() {
     try {
       setLoading(true)
       setError("")
-      const response = await fetch(getApiUrl("/courses"))
+      const response = await fetch(getApiUrl("/courses/all"))
       if (response.ok) {
         const data = await response.json()
         setCourses(data)
@@ -393,7 +393,7 @@ function CourseFormComponent({
         schedules: dedupedSchedules,
       }
 
-      const url = course ? getApiUrl(`/courses/${course.id}`) : getApiUrl("/courses")
+      const url = course ? getApiUrl(`/courses/${course.id}`) : getApiUrl("/courses/all")
       const method = course ? "PUT" : "POST"
 
       const response = await fetch(url, {

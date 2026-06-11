@@ -40,7 +40,7 @@ export function CourseForm({ course, onSave, onCancel }: CourseFormProps) {
     setLoading(true)
 
     try {
-      const url = course ? getApiUrl(`/courses/${course.id}`) : getApiUrl("/courses")
+      const url = course ? getApiUrl(`/courses/${course.id}`) : getApiUrl("/courses/all")
       const method = course ? "PUT" : "POST"
 
       const response = await fetch(url, {
