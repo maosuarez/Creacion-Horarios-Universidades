@@ -44,7 +44,7 @@ else:
         DATABASE_URL = f"{_base_url}?ssl_ca={_ssl_ca}"
     else:
         DATABASE_URL = _base_url
-    engine = create_engine(DATABASE_URL)
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 
 SessionLocal = sessionmaker(

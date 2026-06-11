@@ -1,10 +1,13 @@
 # Código con manejo de errores y comentarios ampliados.
 # NOTA: Se respeta toda la lógica original; únicamente se agregan comentarios detallados.
 
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 from app.database import get_db
 from app.models.comment import Comment
 from app.models.profile import Profile
@@ -226,10 +229,12 @@ def get_my_comments(
                  .all()
         )
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        logger.exception("SQLAlchemyError en get_my_comments: %s", e)
         raise HTTPException(status_code=500, detail="Error interno al obtener tus comentarios")
 
-    except Exception:
+    except Exception as e:
+        logger.exception("Exception inesperada en get_my_comments: %s", e)
         raise HTTPException(status_code=500, detail="Error inesperado al obtener tus comentarios")
 
     # Se incluye el nombre y correo del autor (siempre el usuario autenticado).
