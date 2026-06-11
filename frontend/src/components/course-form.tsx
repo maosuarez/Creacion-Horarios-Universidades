@@ -6,6 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AlertCircle, Loader } from "lucide-react"
+import { getApiUrl } from "@/lib/api-client"
 
 interface Course {
   id?: string
@@ -39,7 +40,7 @@ export function CourseForm({ course, onSave, onCancel }: CourseFormProps) {
     setLoading(true)
 
     try {
-      const url = course ? `/api/courses/${course.id}` : "/api/courses/"
+      const url = course ? getApiUrl(`/courses/${course.id}`) : getApiUrl("/courses/")
       const method = course ? "PUT" : "POST"
 
       const response = await fetch(url, {
