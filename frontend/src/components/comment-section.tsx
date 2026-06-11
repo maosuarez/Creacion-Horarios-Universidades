@@ -108,7 +108,7 @@ export function CommentSection({ courseId }: CommentSectionProps) {
         return
       }
 
-      const response = await fetch(getApiUrl("/comments/"), {
+      const response = await fetch(getApiUrl("/comments"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

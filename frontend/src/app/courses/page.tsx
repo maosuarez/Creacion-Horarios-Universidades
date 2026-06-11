@@ -393,7 +393,7 @@ function CourseFormComponent({
         schedules: dedupedSchedules,
       }
 
-      const url = course ? getApiUrl(`/courses/${course.id}`) : getApiUrl("/courses/")
+      const url = course ? getApiUrl(`/courses/${course.id}`) : getApiUrl("/courses")
       const method = course ? "PUT" : "POST"
 
       const response = await fetch(url, {

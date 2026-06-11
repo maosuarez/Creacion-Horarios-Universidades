@@ -67,7 +67,7 @@ def check_comment_owner(comment: Comment, current_user: Profile):
 # Crear comentario
 # ---------------------------------------------------------------------------
 
-@router.post("/", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
 def create_comment(
     comment_data: CommentCreate,
     current_user: Profile = Depends(get_current_user),
@@ -128,7 +128,7 @@ def create_comment(
 # Listar comentarios
 # ---------------------------------------------------------------------------
 
-@router.get("/", response_model=CommentListResponse)
+@router.get("", response_model=CommentListResponse)
 def list_comments(
     course_id: Optional[int] = Query(None, description="Filtrar por curso"),
     profile_id: Optional[int] = Query(None, description="Filtrar por usuario"),

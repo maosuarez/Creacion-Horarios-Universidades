@@ -14,7 +14,7 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=SharedScheduleResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=SharedScheduleResponse, status_code=status.HTTP_201_CREATED)
 def share_schedule(
     body: ShareScheduleRequest,
     current_user: Profile = Depends(get_current_user),

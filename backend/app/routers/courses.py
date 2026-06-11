@@ -61,7 +61,7 @@ def get_or_create_teacher(db: Session, full_name: str):
 # Rutas
 # ------------------------------
 # Crear un nuevo curso
-@router.post("/")
+@router.post("")
 def create_course(data: CourseCreate, db: Session = Depends(get_db)):
     try:
         # -----------------------------

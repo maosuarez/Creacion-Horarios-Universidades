@@ -16,7 +16,7 @@ router = APIRouter(prefix="/subjects", tags=["Subjects"])
 # ------------------------------
 
 # Obtener todos los nombres de cursos
-@router.get("/")
+@router.get("")
 def get_all_subjects(db: Session = Depends(get_db)):
     subjects = db.query(Course.subject).distinct().all()
     return [s[0] for s in subjects]

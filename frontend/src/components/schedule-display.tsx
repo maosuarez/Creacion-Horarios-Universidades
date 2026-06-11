@@ -251,7 +251,7 @@ export function ScheduleDisplay({ schedules, onBack, onGenerateMore }: ScheduleD
     setSaveLoading(true)
     setSaveError("")
     try {
-      const response = await fetch(getApiUrl("/saved-schedules/"), {
+      const response = await fetch(getApiUrl("/saved-schedules"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -289,7 +289,7 @@ export function ScheduleDisplay({ schedules, onBack, onGenerateMore }: ScheduleD
     setShareLoading(true)
     setShareError("")
     try {
-      const response = await fetch(getApiUrl("/shared-schedules/"), {
+      const response = await fetch(getApiUrl("/shared-schedules"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

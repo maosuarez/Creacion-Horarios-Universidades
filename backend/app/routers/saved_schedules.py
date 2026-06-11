@@ -14,7 +14,7 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=SavedScheduleResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=SavedScheduleResponse, status_code=status.HTTP_201_CREATED)
 def save_schedule(
     body: SaveScheduleRequest,
     current_user: Profile = Depends(get_current_user),
@@ -32,7 +32,7 @@ def save_schedule(
     return saved
 
 
-@router.get("/", response_model=List[SavedScheduleResponse])
+@router.get("", response_model=List[SavedScheduleResponse])
 def list_saved_schedules(
     current_user: Profile = Depends(get_current_user),
     db: Session = Depends(get_db),
