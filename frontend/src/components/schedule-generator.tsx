@@ -171,7 +171,7 @@ export function ScheduleGenerator() {
         freetime: freeTime,
       }
 
-      const response = await fetch(getApiUrl("/generate-schedules/"), {
+      const response = await fetch(getApiUrl("/generate-schedules"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -220,7 +220,7 @@ export function ScheduleGenerator() {
         freetime: freeTime,
       }
 
-      const response = await fetch(getApiUrl("/generate-schedules/"), {
+      const response = await fetch(getApiUrl("/generate-schedules"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

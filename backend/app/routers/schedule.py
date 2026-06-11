@@ -271,7 +271,7 @@ from app.database import get_db
 # Endpoint FastAPI
 router = APIRouter(prefix="/generate-schedules", tags=["Generate Schedules"])
 
-@router.post("/", response_model=List[ScheduleResponse])
+@router.post("", response_model=List[ScheduleResponse])
 async def generate_schedules(
     filters: FilteredCourses,
     count: int = Query(
