@@ -23,7 +23,6 @@ app = FastAPI(
     title="API de Creacion de Horarios",
     description="API con autenticación JWT y base de datos con los horarios posibles",
     version="1.0.0",
-    redirect_slashes=False,
 )
 
 # ---------------------------------------------------------
