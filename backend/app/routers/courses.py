@@ -590,7 +590,7 @@ def get_course(course_id: Annotated[int, Path(title="ID del curso", description=
             detail=f"Error interno al procesar el curso: {type(e).__name__}"
         )
     
-@router.get(["/", "", "/all"])
+@router.get("/all")
 def get_all_courses(db: Session = Depends(get_db)):
     try:
         # Consulta con cargas anticipadas
