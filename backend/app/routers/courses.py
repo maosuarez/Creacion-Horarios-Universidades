@@ -530,6 +530,56 @@ def update_course(course_id: Annotated[int, Path(title="ID del curso", descripti
         db.rollback()
         raise HTTPException(500, f"Error interno: {str(e)}")
 
+@router.get("/all")
+def get_all_courses(db: Session = Depends(get_db)):
+    try:
+        # Consulta con cargas anticipadas
+        courses = (
+            db.query(Course)
+            .options(
+                joinedload(Course.teacher),
+                joinedload(Course.schedules)
+            )
+            .all()
+        )
+
+        payload = []
+        for course in courses:
+            # Nombre seguro del profesor
+            teacher_full_name = course.teacher.full_name if course.teacher else None
+
+            # Horarios seguros
+            schedules = []
+            for s in (course.schedules or []):
+                schedules.append({
+                    "day": s.day,
+                    "start_time": s.start_time,
+                    "end_time": s.end_time,
+                    "location": s.location,
+                })
+
+            payload.append({
+                "id": course.id,
+                "subject": course.subject,
+                "code": course.code,
+                "teacher_full_name": teacher_full_name,
+                "schedules": schedules
+            })
+
+        return JSONResponse(content=jsonable_encoder(payload), status_code=200)
+
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=500,
+            detail="Error en la base de datos al consultar los cursos"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error interno al procesar los cursos: {type(e).__name__}"
+        )
+
 @router.get("/{course_id}")
 def get_course(course_id: Annotated[int, Path(title="ID del curso", description="Debe ser un entero positivo", ge=1)], db: Session = Depends(get_db)):
     try:
@@ -588,56 +638,6 @@ def get_course(course_id: Annotated[int, Path(title="ID del curso", description=
         raise HTTPException(
             status_code=500,
             detail=f"Error interno al procesar el curso: {type(e).__name__}"
-        )
-    
-@router.get("/all")
-def get_all_courses(db: Session = Depends(get_db)):
-    try:
-        # Consulta con cargas anticipadas
-        courses = (
-            db.query(Course)
-            .options(
-                joinedload(Course.teacher),
-                joinedload(Course.schedules)
-            )
-            .all()
-        )
-
-        payload = []
-        for course in courses:
-            # Nombre seguro del profesor
-            teacher_full_name = course.teacher.full_name if course.teacher else None
-
-            # Horarios seguros
-            schedules = []
-            for s in (course.schedules or []):
-                schedules.append({
-                    "day": s.day,
-                    "start_time": s.start_time,
-                    "end_time": s.end_time,
-                    "location": s.location,
-                })
-
-            payload.append({
-                "id": course.id,
-                "subject": course.subject,
-                "code": course.code,
-                "teacher_full_name": teacher_full_name,
-                "schedules": schedules
-            })
-
-        return JSONResponse(content=jsonable_encoder(payload), status_code=200)
-
-    except SQLAlchemyError:
-        raise HTTPException(
-            status_code=500,
-            detail="Error en la base de datos al consultar los cursos"
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error interno al procesar los cursos: {type(e).__name__}"
         )
 
 # Eliminar un curso por ID
